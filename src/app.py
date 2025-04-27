@@ -2,6 +2,7 @@
 
 import gradio as gr
 import random
+import math
 
 #: How much distance has to be travelled (in km)
 range_distances: list[int] = [500, 4500]
@@ -31,39 +32,70 @@ step_deviation: int = 5
 #: What percentage of calories has to be gathered as opposed to coming from provisions
 step_perc_gather: int = 10
 
+#: How many calories are needed per day (based on Mullie et al. 2021)
+calories_per_day: int = 3800
 
-def calc_crossing_duration(distance: int, speed: float, traveling_hours: int, max_deviation: int) -> int:
-    """Calculates the crossing duration based on distance and speed.
+#: How often a seal has to be hunted (in days)
+seal_hunt_interval: int = 5
 
+
+
+# def calc_crossing_duration(distance: int, speed: float, traveling_hours: int, max_deviation: int) -> int:
+#     """Calculates the crossing duration based on distance and speed.
+
+#     Args:
+#         distance (int): The distance to be traveled in kilometers.
+#         speed (float): The speed of the vehicle in knots.
+#         traveling_hours (int): The number of hours spent traveling each day.
+
+#     Returns:
+#         int: The crossing duration in days, rounded to the nearest whole number.
+#     """
+#     # Convert knots to km/h
+#     speed_kmh = speed * 1.852
+#     # Calculate time in hours
+#     time_hours = distance / speed_kmh
+#     # Calculate time in days, considering the hours spent traveling each day (rounded to the nearest whole number)
+#     time_days = round(time_hours / traveling_hours)
+
+#     return time_days
+
+def calc_new_distance(daily_distance: float, initial_distance: int, deviation_angle: float) -> int:
+    """Calculates the new distance to the destination based on the deviation angle and two known distances.
+
+    The formula is: n = sqrt(a^2 + b^2 - 2ab * cos(theta)), where:
+    - n is the new distance to the destination
+    - a is the daily distance traveled
+    - b is the old distance to the destination
+    - theta is the angle of deviation from the direct path
+        
     Args:
-        distance (int): The distance to be traveled in kilometers.
-        speed (float): The speed of the vehicle in knots.
-        traveling_hours (int): The number of hours spent traveling each day.
-
+        daily_distance (float): The distance traveled in a day (in km).
+        initial_distance (int): The initial distance to the destination (in km).
+        deviation_angle (float): The angle of deviation from the direct path (in degrees).
     Returns:
-        int: The crossing duration in days, rounded to the nearest whole number.
-    """
-    # Convert knots to km/h
-    speed_kmh = speed * 1.852
-    # Calculate time in hours
-    time_hours = distance / speed_kmh
-    # Calculate time in days, considering the hours spent traveling each day (rounded to the nearest whole number)
-    time_days = round(time_hours / traveling_hours)
-
-    return time_days
+        int: The new distance to the destination (in km).
+        """
+    print(deviation_angle)
+    new_distance = math.sqrt(math.pow(daily_distance, 2) + math.pow(initial_distance, 2) - 2 * daily_distance * initial_distance * math.cos(math.radians(deviation_angle)))
+    return new_distance
 
 def randomize_angle(max_deviation: int) -> int:
-	"""Generates a random angle between 0 and the input maximum, following a normal distribution."""
-	mu = 0
-	sigma = max_deviation / 3
+    """Generates a random angle between 0 and the input maximum, following a normal distribution.
+
+        Args:
+            max_deviation (int): The maximum deviation angle in degrees.
+        Returns:
+            int: A random angle between 0 and max_deviation (in degrees).
+        """
+    mu = 0
+    sigma = max_deviation / 3
       
-	angle = random.gauss(mu, sigma)
-	if -max_deviation <= angle <= max_deviation:
-		return angle
-	else:
-		randomize_angle(max_deviation)
+    while True: 
+        angle = int(random.gauss(mu, sigma))
+        return angle
             
-def process_inputs(distance: int, speed: float, traveling_hours: int, duration: int, max_deviation: int) -> str:
+def process_inputs(distance: int, speed: float, traveling_hours: int, duration: int, perc_calories: int, hunt_freq: int,  max_deviation: int) -> str:
     """Processes the inputs and calculates the crossing duration.
 
     Args:
@@ -71,14 +103,50 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
         speed (float): The speed of the vehicle in knots.
         traveling_hours (int): The number of hours spent traveling each day.
         duration (int): The duration of the sea ice in days.
+
+        perc_calories (int): The percentage of calories that has to be gathered.
+        hunt_freq (int): The frequency of hunting seals in days.
+
         max_deviation (int): The maximum deviation angle in degrees.
 
     Returns:
-        str: A message indicating the crossing duration in days.
+       
     """
-    crossing_duration = calc_crossing_duration(distance, speed, traveling_hours)
+    crossing_duration: int = 0
 
-    return f"Crossing duration: {crossing_duration} days.\nSea ice duration: {duration} days."
+    # Convert knots to km/h
+    speed_kmh = speed * 1.852
+    # Calculates daily distance traveled
+    daily_distance = speed_kmh * traveling_hours
+    # Store original distance
+    original_distance = distance
+
+    # Calculates a hunting frequency based on the percentage of calories that has to be gathered
+    # E.g. 100% -> 5 days, 20% -> 25 days
+    if perc_calories == 0:
+        # If no hunting is assumed, hunt frequency is set to 365 days, which is functionally never
+        hunt_freq = 365
+    else:
+        hunt_freq = int(hunt_freq * (100 / perc_calories))
+
+    while distance > daily_distance: 
+        crossing_duration += 1
+        # Checks if it is time to hunt
+        if crossing_duration % hunt_freq == 0:
+             print(f"Day {crossing_duration}: Time to hunt!")
+             
+        else:
+            current_angle = randomize_angle(max_deviation)
+            distance = calc_new_distance(daily_distance, distance, current_angle)
+            print(f"Day {crossing_duration}: New distance is {distance} km")
+
+    crossing_duration += 1
+    if crossing_duration < duration:
+        return (f"Successfully covered {original_distance} km in {crossing_duration} days.\n"
+                f"Sea ice duration: {duration} days.\n")
+    else:
+          return (f"Failed to cover {original_distance} km in {crossing_duration} days.\n"
+                  f"Sea ice duration was only {duration} days.\n")
 
 def gui():
     """Draws the GUI for the Atlantic Solutrean project.
@@ -113,11 +181,14 @@ def gui():
         gather = gr.Slider(
             label="% gathered calories", minimum=0, maximum=100, step=step_perc_gather,
             interactive=True)
+        
+        #: Constant numbers have to be passed to the function this way
+        hunt_freq = gr.Number(visible=False, value=seal_hunt_interval)
 
         output = gr.Textbox(label="Output")
         test_btn = gr.Button("Test")
         test_btn.click(fn=process_inputs, inputs=[
-                       distance, speed, hours, duration, max_deviation], outputs=output)
+                       distance, speed, hours, duration, gather, hunt_freq, deviation], outputs=output)
 
     simulation.launch()
 
