@@ -38,28 +38,6 @@ calories_per_day: int = 3800
 #: How often a seal has to be hunted (in days)
 seal_hunt_interval: int = 5
 
-
-
-# def calc_crossing_duration(distance: int, speed: float, traveling_hours: int, max_deviation: int) -> int:
-#     """Calculates the crossing duration based on distance and speed.
-
-#     Args:
-#         distance (int): The distance to be traveled in kilometers.
-#         speed (float): The speed of the vehicle in knots.
-#         traveling_hours (int): The number of hours spent traveling each day.
-
-#     Returns:
-#         int: The crossing duration in days, rounded to the nearest whole number.
-#     """
-#     # Convert knots to km/h
-#     speed_kmh = speed * 1.852
-#     # Calculate time in hours
-#     time_hours = distance / speed_kmh
-#     # Calculate time in days, considering the hours spent traveling each day (rounded to the nearest whole number)
-#     time_days = round(time_hours / traveling_hours)
-
-#     return time_days
-
 def calc_new_distance(daily_distance: float, initial_distance: int, deviation_angle: float) -> int:
     """Calculates the new distance to the destination based on the deviation angle and two known distances.
 
@@ -95,7 +73,7 @@ def randomize_angle(max_deviation: int) -> int:
         angle = int(random.gauss(mu, sigma))
         return angle
             
-def process_inputs(distance: int, speed: float, traveling_hours: int, duration: int, perc_calories: int, hunt_freq: int,  max_deviation: int) -> str:
+def process_inputs(distance: int, speed: float, traveling_hours: int, duration: int, perc_calories: int, hunt_freq: int,  max_deviation: int, verbose: bool) -> str:
     """Processes the inputs and calculates the crossing duration.
 
     Args:
@@ -109,10 +87,14 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
 
         max_deviation (int): The maximum deviation angle in degrees.
 
-    Returns:
+        verbose (bool): If True, prints detailed output.
+
+    Returns: 
+        str: A message indicating whether the crossing was successful or not.
        
     """
     crossing_duration: int = 0
+    verbose_output: str = ""
 
     # Convert knots to km/h
     speed_kmh = speed * 1.852
@@ -134,19 +116,27 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
         # Checks if it is time to hunt
         if crossing_duration % hunt_freq == 0:
              print(f"Day {crossing_duration}: Time to hunt!")
+             if verbose:
+                verbose_output += f"Day {crossing_duration}: Time to hunt!\n"
              
         else:
             current_angle = randomize_angle(max_deviation)
-            distance = calc_new_distance(daily_distance, distance, current_angle)
+            distance = int(calc_new_distance(daily_distance, distance, current_angle))
             print(f"Day {crossing_duration}: New distance is {distance} km")
+            if verbose:
+                verbose_output += f"Day {crossing_duration}: New distance is {distance} km\n"
 
     crossing_duration += 1
     if crossing_duration < duration:
         return (f"Successfully covered {original_distance} km in {crossing_duration} days.\n"
-                f"Sea ice duration: {duration} days.\n")
+                f"Sea ice duration: {duration} days.\n"
+                "-------------------------------\n"
+                + verbose_output)
     else:
           return (f"Failed to cover {original_distance} km in {crossing_duration} days.\n"
-                  f"Sea ice duration was only {duration} days.\n")
+                  f"Sea ice duration was only {duration} days.\n"
+                  "-------------------------------\n"
+                  + verbose_output)
 
 def gui():
     """Draws the GUI for the Atlantic Solutrean project.
@@ -186,9 +176,10 @@ def gui():
         hunt_freq = gr.Number(visible=False, value=seal_hunt_interval)
 
         output = gr.Textbox(label="Output")
-        test_btn = gr.Button("Test")
-        test_btn.click(fn=process_inputs, inputs=[
-                       distance, speed, hours, duration, gather, hunt_freq, deviation], outputs=output)
+        verbose_check = gr.Checkbox(label="Verbose output", value=False)
+        run_btn = gr.Button("Run")
+        run_btn.click(fn=process_inputs, inputs=[
+                       distance, speed, hours, duration, gather, hunt_freq, deviation, verbose_check], outputs=output)
 
     simulation.launch()
 
