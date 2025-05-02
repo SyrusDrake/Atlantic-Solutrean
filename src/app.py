@@ -1,8 +1,10 @@
 """This is the main file for the Atlantic Solutrean project."""
 
 import gradio as gr
-import random
+from random import gauss
 import math
+from time import sleep
+import webbrowser
 
 #: How much distance has to be travelled (in km)
 range_distances: list[int] = [500, 4500]
@@ -38,6 +40,7 @@ calories_per_day: int = 3800
 #: How often a seal has to be hunted (in days)
 seal_hunt_interval: int = 5
 
+
 def calc_new_distance(daily_distance: float, initial_distance: int, deviation_angle: float) -> int:
     """Calculates the new distance to the destination based on the deviation angle and two known distances.
 
@@ -46,7 +49,7 @@ def calc_new_distance(daily_distance: float, initial_distance: int, deviation_an
     - a is the daily distance traveled
     - b is the old distance to the destination
     - theta is the angle of deviation from the direct path
-        
+
     Args:
         daily_distance (float): The distance traveled in a day (in km).
         initial_distance (int): The initial distance to the destination (in km).
@@ -54,9 +57,10 @@ def calc_new_distance(daily_distance: float, initial_distance: int, deviation_an
     Returns:
         int: The new distance to the destination (in km).
         """
-    print(deviation_angle)
-    new_distance = math.sqrt(math.pow(daily_distance, 2) + math.pow(initial_distance, 2) - 2 * daily_distance * initial_distance * math.cos(math.radians(deviation_angle)))
+    new_distance = math.sqrt(math.pow(daily_distance, 2) + math.pow(initial_distance, 2) -
+                             2 * daily_distance * initial_distance * math.cos(math.radians(deviation_angle)))
     return new_distance
+
 
 def randomize_angle(max_deviation: int) -> int:
     """Generates a random angle between 0 and the input maximum, following a normal distribution.
@@ -68,11 +72,12 @@ def randomize_angle(max_deviation: int) -> int:
         """
     mu = 0
     sigma = max_deviation / 3
-      
-    while True: 
-        angle = int(random.gauss(mu, sigma))
+
+    while True:
+        angle = int(gauss(mu, sigma))
         return angle
-            
+
+
 def process_inputs(distance: int, speed: float, traveling_hours: int, duration: int, perc_calories: int, hunt_freq: int,  max_deviation: int, verbose: bool) -> str:
     """Processes the inputs and calculates the crossing duration.
 
@@ -91,7 +96,7 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
 
     Returns: 
         str: A message indicating whether the crossing was successful or not.
-       
+
     """
     crossing_duration: int = 0
     verbose_output: str = ""
@@ -111,18 +116,17 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
     else:
         hunt_freq = int(hunt_freq * (100 / perc_calories))
 
-    while distance > daily_distance: 
+    while distance > daily_distance:
         crossing_duration += 1
         # Checks if it is time to hunt
         if crossing_duration % hunt_freq == 0:
-             print(f"Day {crossing_duration}: Time to hunt!")
-             if verbose:
+            if verbose:
                 verbose_output += f"Day {crossing_duration}: Time to hunt!\n"
-             
+
         else:
             current_angle = randomize_angle(max_deviation)
-            distance = int(calc_new_distance(daily_distance, distance, current_angle))
-            print(f"Day {crossing_duration}: New distance is {distance} km")
+            distance = int(calc_new_distance(
+                daily_distance, distance, current_angle))
             if verbose:
                 verbose_output += f"Day {crossing_duration}: New distance is {distance} km\n"
 
@@ -133,10 +137,11 @@ def process_inputs(distance: int, speed: float, traveling_hours: int, duration: 
                 "-------------------------------\n"
                 + verbose_output)
     else:
-          return (f"Failed to cover {original_distance} km in {crossing_duration} days.\n"
-                  f"Sea ice duration was only {duration} days.\n"
-                  "-------------------------------\n"
-                  + verbose_output)
+        return (f"Failed to cover {original_distance} km in {crossing_duration} days.\n"
+                f"Sea ice duration was only {duration} days.\n"
+                "-------------------------------\n"
+                + verbose_output)
+
 
 def gui():
     """Draws the GUI for the Atlantic Solutrean project.
@@ -171,7 +176,7 @@ def gui():
         gather = gr.Slider(
             label="% gathered calories", minimum=0, maximum=100, step=step_perc_gather,
             interactive=True)
-        
+
         #: Constant numbers have to be passed to the function this way
         hunt_freq = gr.Number(visible=False, value=seal_hunt_interval)
 
@@ -179,9 +184,9 @@ def gui():
         verbose_check = gr.Checkbox(label="Verbose output", value=False)
         run_btn = gr.Button("Run")
         run_btn.click(fn=process_inputs, inputs=[
-                       distance, speed, hours, duration, gather, hunt_freq, deviation, verbose_check], outputs=output)
+            distance, speed, hours, duration, gather, hunt_freq, deviation, verbose_check], outputs=output)
 
-    simulation.launch()
+    simulation.launch(inbrowser=True)
 
 
 if __name__ == "__main__":

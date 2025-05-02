@@ -1,2 +1,16 @@
 
 sandbox.py
+
+src/dist/
+
+src/build/
+
+src/__pycache__/
+
+src/chord.py
+
+src/gauss.py
+
+src/prooving_grounds.py
+
+src/sas.py
