@@ -1,6 +1,6 @@
 # Across Icy Atlantic
 
-The purpose of this project is to simulate a hypothetical Atlantic Ocean crossing by Solutrean hunters. The idea was primarily inspired on the paper ["Solutrean Seal Hunters?"] (https://www.journals.uchicago.edu/doi/abs/10.3998/jar.0521004.0070.404) by Kelly M. Phillips (2014) and the book ["Across Atlantic Ice"] (https://www.ucpress.edu/books/across-atlantic-ice/paper) by Dennis J. Stanford and Bruce A. Bradley (2012). 
+The purpose of this project is to simulate a hypothetical Atlantic Ocean crossing by Solutrean hunters. The idea was primarily inspired by the paper ["Solutrean Seal Hunters?"](https://www.journals.uchicago.edu/doi/abs/10.3998/jar.0521004.0070.404) by Kelly M. Phillips (2014) and the book ["Across Atlantic Ice"](https://www.ucpress.edu/books/across-atlantic-ice/paper) by Dennis J. Stanford and Bruce A. Bradley (2012). 
 
 # Project Goals
 
